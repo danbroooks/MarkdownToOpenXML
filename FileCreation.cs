@@ -21,40 +21,10 @@ namespace MarkdownToOpenXML
 
     public class MD2OXMLFile
     {
-        public string Name { get; set; }
-        public string Value { get; set; }
-        public override string ToString() { return this.Name; }
-
-        private RunPropertiesBaseStyle CreateRunBaseStyle()
-        {
-            RunPropertiesBaseStyle runBaseStyle = new RunPropertiesBaseStyle();
-
-            RunFonts font = new RunFonts();
-            font.Ascii = "Arial";
-            runBaseStyle.Append(font);
-            runBaseStyle.Append(new FontSize() { Val = "22" });
-            runBaseStyle.Append(new FontSizeComplexScript() { Val = "22" });
-            runBaseStyle.Append(new Languages()
-            {
-                Val = "en-GB",
-                EastAsia = "en-GB",
-                Bidi = "ar-SA"
-            });
-
-            return runBaseStyle;
-        }
-
         public void GenerateStyleDefinitionsPart1Content(StyleDefinitionsPart part)
         {
-
-            Styles doc_styles = new Styles() { MCAttributes = new MarkupCompatibilityAttributes() { Ignorable = "w14" } };
-            doc_styles.AddNamespaceDeclaration("mc", "http://schemas.openxmlformats.org/markup-compatibility/2006");
-            doc_styles.AddNamespaceDeclaration("r", "http://schemas.openxmlformats.org/officeDocument/2006/relationships");
-            doc_styles.AddNamespaceDeclaration("w", "http://schemas.openxmlformats.org/wordprocessingml/2006/main");
-            doc_styles.AddNamespaceDeclaration("w14", "http://schemas.microsoft.com/office/word/2010/wordml");
-
+            Styles doc_styles = GenerateDocumentStyles();
             DocDefaults document_defaults = new DocDefaults();
-
             RunPropertiesDefault defaultRunProperties = new RunPropertiesDefault(CreateRunBaseStyle());
             document_defaults.Append(defaultRunProperties);
 
@@ -88,16 +58,7 @@ namespace MarkdownToOpenXML
                 UnhideWhenUsed = false,
                 PrimaryStyle = true
             });
-
-            Style Style_Normal = new Style()
-            {
-                Type = StyleValues.Paragraph,
-                StyleId = "Normal",
-                Default = true
-            };
-            Style_Normal.Append(new StyleName() { Val = "Normal" });
-            Style_Normal.Append(new PrimaryStyle());
-
+            Style Normal = GenerateNormal();
 
             latentStyles1.Append(new LatentStyleExceptionInfo()
             {
@@ -107,6 +68,61 @@ namespace MarkdownToOpenXML
                 UnhideWhenUsed = false,
                 PrimaryStyle = true
             });
+            Style Header1 = GenerateHeader1();
+
+            doc_styles.Append(document_defaults);
+            doc_styles.Append(latentStyles1);
+            doc_styles.Append(Normal);
+            doc_styles.Append(Header1);
+
+            part.Styles = doc_styles;
+        }
+
+        private RunPropertiesBaseStyle CreateRunBaseStyle()
+        {
+            RunPropertiesBaseStyle runBaseStyle = new RunPropertiesBaseStyle();
+
+            RunFonts font = new RunFonts();
+            font.Ascii = "Arial";
+            runBaseStyle.Append(font);
+            runBaseStyle.Append(new FontSize() { Val = "22" });
+            runBaseStyle.Append(new FontSizeComplexScript() { Val = "22" });
+            runBaseStyle.Append(new Languages()
+            {
+                Val = "en-GB",
+                EastAsia = "en-GB",
+                Bidi = "ar-SA"
+            });
+
+            return runBaseStyle;
+        }
+
+        private Styles GenerateDocumentStyles()
+        {
+            Styles doc_styles = new Styles() { MCAttributes = new MarkupCompatibilityAttributes() { Ignorable = "w14" } };
+            doc_styles.AddNamespaceDeclaration("mc", "http://schemas.openxmlformats.org/markup-compatibility/2006");
+            doc_styles.AddNamespaceDeclaration("r", "http://schemas.openxmlformats.org/officeDocument/2006/relationships");
+            doc_styles.AddNamespaceDeclaration("w", "http://schemas.openxmlformats.org/wordprocessingml/2006/main");
+            doc_styles.AddNamespaceDeclaration("w14", "http://schemas.microsoft.com/office/word/2010/wordml");
+            return doc_styles;
+        }
+
+        private Style GenerateNormal()
+        {
+            Style Style_Normal = new Style()
+            {
+                Type = StyleValues.Paragraph,
+                StyleId = "Normal",
+                Default = true
+            };
+            Style_Normal.Append(new StyleName() { Val = "Normal" });
+            Style_Normal.Append(new PrimaryStyle());
+            
+            return Style_Normal;
+        }
+
+        private Style GenerateHeader1()
+        {
             Style Style_Header1 = new Style() { Type = StyleValues.Paragraph, StyleId = "Heading1" };
 
             StyleParagraphProperties ParagraphProperties_Header1 = new StyleParagraphProperties();
@@ -134,12 +150,8 @@ namespace MarkdownToOpenXML
             Style_Header1.Append(new PrimaryStyle());
             Style_Header1.Append(new Rsid() { Val = "00AF6F24" });
 
-            doc_styles.Append(document_defaults);
-            doc_styles.Append(latentStyles1);
-            doc_styles.Append(Style_Normal);
-            doc_styles.Append(Style_Header1);
-
-            part.Styles = doc_styles;
+            return Style_Header1;
         }
+
     }
 }
