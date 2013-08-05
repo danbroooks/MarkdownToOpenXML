@@ -13,4 +13,32 @@ string markdown = @"# This is a header";
 MD2OXML.CreateDocX(markdown, @"C:\MyMarkdown.docx");
 ```
 
+By default the class will use the standard markdown syntax:
+
+```
+# Header1 text
+
+Two newlines represents a new paragraph, without the # at the start this will output normal text
+
+*Italic* out puts italic text and **bold** outputs bold text
+```
+
+However there is a custom syntax mode which add's in support for underline, before running the main MD2OXML method, set this:
+
+```c#
+MarkdownToOpenXML.MD2OXML.customMode = true;
+```
+
+This will then support this syntax:
+
+```
+**Bold text**
+
+`Italics`
+
+_Underlined text_
+```
+
+In both cases, syntax markers can be mixed and matched as you please.
+
 More to come.
