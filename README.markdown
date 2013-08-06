@@ -23,7 +23,7 @@ Two newlines represents a new paragraph, without the # at the start this will ou
 *Italic* out puts italic text and **bold** outputs bold text
 ```
 
-However there is a custom syntax mode which add's in support for underline, before running the main MD2OXML method, set this:
+However there is a custom syntax mode which adds in support for underline - before running the main MD2OXML method, set this:
 
 ```c#
 MarkdownToOpenXML.MD2OXML.customMode = true;
@@ -39,6 +39,6 @@ This will then support this syntax:
 _Underlined text_
 ```
 
-In both cases, syntax markers can be mixed and matched as you please.
+In both modes, syntax markers can be mixed and matched as you please.
 
 More to come.

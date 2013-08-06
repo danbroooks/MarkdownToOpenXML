@@ -56,15 +56,9 @@ namespace MarkdownToOpenXML
                 int CurrentPosition = 0;
                 int cropSymbol = 0;
                 
-                Regex pattern;
-                if (!CustomMode)
-                {
-                    pattern = new Regex(@"(\*\*|\*)");
-                }
-                else
-                {
-                    pattern = new Regex(@"(\*\*|`|_)");
-                }
+                Regex pattern = CustomMode 
+                    ? new Regex(@"(\*\*|`|_)")
+                    : new Regex(@"(\*\*|\*)");
 
                 Match m = pattern.Match(line);
                 Run run = new Run();
@@ -109,7 +103,6 @@ namespace MarkdownToOpenXML
                         }
 
                         p.Append(run);
-
                         run = new Run();
                     }
                 }
