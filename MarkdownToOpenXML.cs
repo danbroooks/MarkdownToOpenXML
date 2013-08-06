@@ -11,23 +11,26 @@ namespace MarkdownToOpenXML
     using System.Text;
     using System.Text.RegularExpressions;
     using System.Threading.Tasks;
-    using System.Diagnostics;
 
     using MarkdownToOpenXML;
 
     class MD2OXML
     {
-        static private bool CustomMode;
-
-        static public bool customMode
+        private static bool CustomMode;
+        public static bool customMode
         {
             set { CustomMode = value; }
         }
 
-        static public void CreateDocX(string content, string docName)
+        public static void CreateDocX(string content, string docName)
         {
             List<string> md = StripDoubleLines(content);
+            Body body = Markdown(md);
+            SaveDocX(body, docName);
+        }
 
+        private static Body Markdown(List<string> md)
+        {
             Body body = new Body();
             int index = 0;
             bool SkipNextLine = false;
@@ -42,7 +45,7 @@ namespace MarkdownToOpenXML
 
                 string lookahead = index + 1 != md.Count ? md[index + 1] : "";
                 string output = line;
-                
+
                 Match isHeader1 = Regex.Match(output, @"^#");
                 String sTest = Regex.Replace(lookahead, @"\w", "");
                 Match isSetextHeader1 = Regex.Match(sTest, @"[=]{2,}");
@@ -58,7 +61,7 @@ namespace MarkdownToOpenXML
 
                     if (isSetextHeader1.Success) SkipNextLine = true;
                 }
-                
+
                 Paragraph p = new Paragraph();
                 p.Append(pPr);
 
@@ -72,8 +75,8 @@ namespace MarkdownToOpenXML
 
                 int CurrentPosition = 0;
                 int cropSymbol = 0;
-                
-                Regex pattern = CustomMode 
+
+                Regex pattern = CustomMode
                     ? new Regex(@"(\*\*|`|_)")
                     : new Regex(@"(\*\*|\*)");
 
@@ -134,10 +137,10 @@ namespace MarkdownToOpenXML
                 index += 1;
             }
 
-            SaveDocX(body, docName);
+            return body;
         }
-        
-        static private List<string> StripDoubleLines(string text)
+
+        private static List<string> StripDoubleLines(string text)
         {
             List<string> md = new List<string>();
 
