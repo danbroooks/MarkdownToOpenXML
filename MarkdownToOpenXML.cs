@@ -11,6 +11,7 @@ namespace MarkdownToOpenXML
     using System.Text;
     using System.Text.RegularExpressions;
     using System.Threading.Tasks;
+    using System.Diagnostics;
 
     using MarkdownToOpenXML;
 
@@ -28,20 +29,36 @@ namespace MarkdownToOpenXML
             List<string> md = StripDoubleLines(content);
 
             Body body = new Body();
-            foreach (string s in md)
+            int index = 0;
+            bool SkipNextLine = false;
+            foreach (string line in md)
             {
-                string line = s;
-                Match isHeader1 = Regex.Match(line, @"^#");
+                if (SkipNextLine)
+                {
+                    index += 1;
+                    SkipNextLine = !SkipNextLine;
+                    continue;
+                }
+
+                string lookahead = index + 1 != md.Count ? md[index + 1] : "";
+                string output = line;
+                
+                Match isHeader1 = Regex.Match(output, @"^#");
+                String sTest = Regex.Replace(lookahead, @"\w", "");
+                Match isSetextHeader1 = Regex.Match(sTest, @"[=]{2,}");
                 ParagraphProperties pPr = new ParagraphProperties();
 
                 // Set Paragraph Styles
-                if (isHeader1.Success)
+                if (isHeader1.Success || isSetextHeader1.Success)
                 {
                     ParagraphStyleId paragraphStyleId1 = new ParagraphStyleId() { Val = "Heading1" };
                     pPr.Append(paragraphStyleId1);
-                    line = line.Substring(1);
-                }
 
+                    if (isHeader1.Success) output = output.Substring(1);
+
+                    if (isSetextHeader1.Success) SkipNextLine = true;
+                }
+                
                 Paragraph p = new Paragraph();
                 p.Append(pPr);
 
@@ -60,13 +77,13 @@ namespace MarkdownToOpenXML
                     ? new Regex(@"(\*\*|`|_)")
                     : new Regex(@"(\*\*|\*)");
 
-                Match m = pattern.Match(line);
+                Match m = pattern.Match(output);
                 Run run = new Run();
 
                 if (m.Success)
                 {
                     RunProperties rPr = new RunProperties();
-                    run.Append(new Text(line.Substring(CurrentPosition, m.Index)));
+                    run.Append(new Text(output.Substring(CurrentPosition, m.Index)));
 
                     while (m.Success)
                     {
@@ -95,11 +112,11 @@ namespace MarkdownToOpenXML
 
                         if (m.Index == 0)
                         {
-                            run.Append(new Text(line.Substring(cropSymbol)));
+                            run.Append(new Text(output.Substring(cropSymbol)));
                         }
                         else
                         {
-                            run.Append(new Text(line.Substring(cropSymbol, m.Index - cropSymbol)));
+                            run.Append(new Text(output.Substring(cropSymbol, m.Index - cropSymbol)));
                         }
 
                         p.Append(run);
@@ -108,11 +125,13 @@ namespace MarkdownToOpenXML
                 }
                 else
                 {
-                    run.Append(new Text(line));
+                    run.Append(new Text(output));
                     p.Append(run);
                 }
 
                 body.Append(p);
+
+                index += 1;
             }
 
             SaveDocX(body, docName);
@@ -131,7 +150,13 @@ namespace MarkdownToOpenXML
                 {
                     if (Regex.Match(line, @"^$").Success)
                     {
-                        md.Add(tmp + line);
+                        if (tmp + line != "") md.Add(tmp + line);
+                        tmp = "";
+                    }
+                    else if (Regex.Match(line, @"^={2,}$").Success)
+                    {
+                        md.Add(tmp);
+                        md.Add(line);
                         tmp = "";
                     }
                     else
