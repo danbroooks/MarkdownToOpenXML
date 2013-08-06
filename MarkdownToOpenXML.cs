@@ -16,24 +16,50 @@ namespace MarkdownToOpenXML
 
     class MD2OXML
     {
+        private static bool SkipNextLine = false;
+        private static string Buffer = "";
+
         private static bool CustomMode;
         public static bool customMode
         {
             set { CustomMode = value; }
         }
 
+
         public static void CreateDocX(string content, string docName)
         {
             List<string> md = StripDoubleLines(content);
-            Body body = Markdown(md);
+            Body body = Convert(md);
             SaveDocX(body, docName);
         }
 
-        private static Body Markdown(List<string> md)
+        private static ParagraphProperties GenerateParagraphProperties(string lookahead)
+        {
+            ParagraphProperties pPr = new ParagraphProperties();
+            Match isHeader1 = Regex.Match(Buffer, @"^#");
+            String sTest = Regex.Replace(lookahead, @"\w", "");
+            Match isSetextHeader1 = Regex.Match(sTest, @"[=]{2,}");
+
+            // Set Paragraph Styles
+            if (isHeader1.Success || isSetextHeader1.Success)
+            {
+                ParagraphStyleId paragraphStyleId1 = new ParagraphStyleId() { Val = "Heading1" };
+                pPr.Append(paragraphStyleId1);
+
+                if (isHeader1.Success) Buffer = Buffer.Substring(1);
+
+                if (isSetextHeader1.Success) SkipNextLine = true;
+            }
+
+            return pPr;
+        }
+
+        private static Body Convert(List<string> md)
         {
             Body body = new Body();
+            SkipNextLine = false;
+            Buffer = @"";
             int index = 0;
-            bool SkipNextLine = false;
             foreach (string line in md)
             {
                 if (SkipNextLine)
@@ -43,25 +69,10 @@ namespace MarkdownToOpenXML
                     continue;
                 }
 
+                Buffer = line;
                 string lookahead = index + 1 != md.Count ? md[index + 1] : "";
-                string output = line;
 
-                Match isHeader1 = Regex.Match(output, @"^#");
-                String sTest = Regex.Replace(lookahead, @"\w", "");
-                Match isSetextHeader1 = Regex.Match(sTest, @"[=]{2,}");
-                ParagraphProperties pPr = new ParagraphProperties();
-
-                // Set Paragraph Styles
-                if (isHeader1.Success || isSetextHeader1.Success)
-                {
-                    ParagraphStyleId paragraphStyleId1 = new ParagraphStyleId() { Val = "Heading1" };
-                    pPr.Append(paragraphStyleId1);
-
-                    if (isHeader1.Success) output = output.Substring(1);
-
-                    if (isSetextHeader1.Success) SkipNextLine = true;
-                }
-
+                ParagraphProperties pPr = GenerateParagraphProperties(lookahead);
                 Paragraph p = new Paragraph();
                 p.Append(pPr);
 
@@ -80,13 +91,13 @@ namespace MarkdownToOpenXML
                     ? new Regex(@"(\*\*|`|_)")
                     : new Regex(@"(\*\*|\*)");
 
-                Match m = pattern.Match(output);
+                Match m = pattern.Match(Buffer);
                 Run run = new Run();
 
                 if (m.Success)
                 {
                     RunProperties rPr = new RunProperties();
-                    run.Append(new Text(output.Substring(CurrentPosition, m.Index)));
+                    run.Append(new Text(Buffer.Substring(CurrentPosition, m.Index)));
 
                     while (m.Success)
                     {
@@ -115,11 +126,11 @@ namespace MarkdownToOpenXML
 
                         if (m.Index == 0)
                         {
-                            run.Append(new Text(output.Substring(cropSymbol)));
+                            run.Append(new Text(Buffer.Substring(cropSymbol)));
                         }
                         else
                         {
-                            run.Append(new Text(output.Substring(cropSymbol, m.Index - cropSymbol)));
+                            run.Append(new Text(Buffer.Substring(cropSymbol, m.Index - cropSymbol)));
                         }
 
                         p.Append(run);
@@ -128,7 +139,7 @@ namespace MarkdownToOpenXML
                 }
                 else
                 {
-                    run.Append(new Text(output));
+                    run.Append(new Text(Buffer));
                     p.Append(run);
                 }
 
