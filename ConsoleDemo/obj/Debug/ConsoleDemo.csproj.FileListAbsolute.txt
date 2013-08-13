@@ -1,0 +1,8 @@
+C:\Visual Studio Projects\MarkdownToOpenXML\ConsoleDemo\bin\Debug\ConsoleDemo.exe.config
+C:\Visual Studio Projects\MarkdownToOpenXML\ConsoleDemo\bin\Debug\ConsoleDemo.exe
+C:\Visual Studio Projects\MarkdownToOpenXML\ConsoleDemo\bin\Debug\ConsoleDemo.pdb
+C:\Visual Studio Projects\MarkdownToOpenXML\ConsoleDemo\obj\Debug\ConsoleDemo.csprojResolveAssemblyReference.cache
+C:\Visual Studio Projects\MarkdownToOpenXML\ConsoleDemo\obj\Debug\ConsoleDemo.exe
+C:\Visual Studio Projects\MarkdownToOpenXML\ConsoleDemo\obj\Debug\ConsoleDemo.pdb
+C:\Visual Studio Projects\MarkdownToOpenXML\ConsoleDemo\bin\Debug\MarkdownToOpenXML.dll
+C:\Visual Studio Projects\MarkdownToOpenXML\ConsoleDemo\bin\Debug\MarkdownToOpenXML.pdb
