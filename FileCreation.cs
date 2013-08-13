@@ -20,7 +20,7 @@ namespace MarkdownToOpenXML
     using Clr = DocumentFormat.OpenXml.Wordprocessing.Color;
 
     public class MD2OXMLFile
-    {
+    {        
         public void GenerateStyleDefinitionsPart1Content(StyleDefinitionsPart part)
         {
             Styles doc_styles = GenerateDocumentStyles();
@@ -85,8 +85,8 @@ namespace MarkdownToOpenXML
             RunFonts font = new RunFonts();
             font.Ascii = "Arial";
             runBaseStyle.Append(font);
-            runBaseStyle.Append(new FontSize() { Val = "22" });
-            runBaseStyle.Append(new FontSizeComplexScript() { Val = "22" });
+            runBaseStyle.Append(new FontSize() { Val = "20" });
+            runBaseStyle.Append(new FontSizeComplexScript() { Val = "20" });
             runBaseStyle.Append(new Languages()
             {
                 Val = "en-GB",
@@ -138,8 +138,8 @@ namespace MarkdownToOpenXML
             RunProperties_Header1.Append(font);
             RunProperties_Header1.Append(new Bold());
             RunProperties_Header1.Append(new BoldComplexScript());
-            RunProperties_Header1.Append(new FontSize() { Val = "20" });
-            RunProperties_Header1.Append(new FontSizeComplexScript() { Val = "20" });
+            RunProperties_Header1.Append(new FontSize() { Val = "24" });
+            RunProperties_Header1.Append(new FontSizeComplexScript() { Val = "24" });
             Style_Header1.Append(RunProperties_Header1);
 
             Style_Header1.Append(new StyleName() { Val = "Heading 1" });

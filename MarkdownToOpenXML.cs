@@ -141,6 +141,49 @@ namespace MarkdownToOpenXML
             return ranges;
         }
 
+        private static ParagraphProperties GenerateParagraphProperties(string lookahead)
+        {
+            ParagraphProperties pPr = new ParagraphProperties();
+            Match isHeader1 = Regex.Match(Buffer, @"^#");
+            String sTest = Regex.Replace(lookahead, @"\w", "");
+            Match isSetextHeader1 = Regex.Match(sTest, @"[=]{2,}");
+
+            Match numberedList = Regex.Match(Buffer, @"^\\d\\.");
+
+            // Set Paragraph Styles
+            if (numberedList.Success)
+            {
+                // Doesnt work currently, needs NumberingDefinitions adding in filecreation
+                Buffer = Buffer.Substring(2);
+                NumberingProperties nPr = new NumberingProperties(
+                    new NumberingLevelReference() { Val = 0 },
+                    new NumberingId() { Val = 1 }
+                );
+
+                pPr.Append(nPr);
+            }
+            
+            if (isHeader1.Success || isSetextHeader1.Success)
+            {
+                ParagraphStyleId paragraphStyleId1 = new ParagraphStyleId() { Val = "Heading1" };
+                pPr.Append(paragraphStyleId1);
+
+                if (isHeader1.Success)
+                {
+                    Buffer = Buffer.Substring(1);
+
+                    // Strip the # from the end of the line if there is one
+                    if (Regex.Match(Buffer, @"#$").Success) Buffer = Buffer.Substring(0, Buffer.Length - 1);
+
+                    Buffer = Buffer.Trim();
+                }
+
+                if (isSetextHeader1.Success) SkipNextLine = true;
+            }
+
+            return pPr;
+        }
+
         private static Paragraph GenerateRuns(Paragraph p, string Buffer)
         {
             // Calculate positions of all tokens and use this to set 
@@ -183,6 +226,8 @@ namespace MarkdownToOpenXML
                 int CurrentPosition = 0;
                 Run run;
 
+                // This needs optimizing so it builds a string buffer before adding the run itself
+
                 while (CurrentPosition < Buffer.Length)
                 {
                     if (!Tokens.ContainsValue(CurrentPosition))
@@ -207,27 +252,6 @@ namespace MarkdownToOpenXML
                 }
             }
             return p;
-        }
-
-        private static ParagraphProperties GenerateParagraphProperties(string lookahead)
-        {
-            ParagraphProperties pPr = new ParagraphProperties();
-            Match isHeader1 = Regex.Match(Buffer, @"^#");
-            String sTest = Regex.Replace(lookahead, @"\w", "");
-            Match isSetextHeader1 = Regex.Match(sTest, @"[=]{2,}");
-
-            // Set Paragraph Styles
-            if (isHeader1.Success || isSetextHeader1.Success)
-            {
-                ParagraphStyleId paragraphStyleId1 = new ParagraphStyleId() { Val = "Heading1" };
-                pPr.Append(paragraphStyleId1);
-
-                if (isHeader1.Success) Buffer = Buffer.Substring(1);
-
-                if (isSetextHeader1.Success) SkipNextLine = true;
-            }
-
-            return pPr;
         }
 
         private static void SaveDocX(Body body, String docName)
