@@ -106,7 +106,16 @@ namespace MarkdownToOpenXML
                 body.Append(p);
                 index += 1;
             }
-
+        /*
+      A space for playing with OpenXML elements
+         *
+            Paragraph para = new Paragraph();
+            Run r = new Run();
+            Text t = new Text("A Test");
+            r.Append(t);
+            para.Append(r);
+            body.Append(para);
+        */
             return body;
         }
 
