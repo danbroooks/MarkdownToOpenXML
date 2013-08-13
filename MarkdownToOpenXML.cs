@@ -14,7 +14,7 @@ namespace MarkdownToOpenXML
 
     using MarkdownToOpenXML;
 
-    class MD2OXML
+    public class MD2OXML
     {
         private static bool SkipNextLine = false;
         private static string Buffer = "";
