@@ -1,9 +1,6 @@
 ﻿
 namespace MarkdownToOpenXML
 {
-    using DocumentFormat.OpenXml;
-    using DocumentFormat.OpenXml.Packaging;
-    using DocumentFormat.OpenXml.Wordprocessing;
     using System;
     using System.Collections.Generic;
     using System.IO;
@@ -12,7 +9,12 @@ namespace MarkdownToOpenXML
     using System.Text.RegularExpressions;
     using System.Threading.Tasks;
 
+    using DocumentFormat.OpenXml;
+    using DocumentFormat.OpenXml.Packaging;
+    using DocumentFormat.OpenXml.Wordprocessing;
+
     using MarkdownToOpenXML;
+    using MarkdownToOpenXML.Classes;
 
     public class MD2OXML
     {
@@ -38,13 +40,54 @@ namespace MarkdownToOpenXML
             { rExKey.Underscore, new Regex("(?<!_)[^_]?(_)([^_].+?)(_)[^_]?") },
         };
 
-        public static void CreateDocX(string content, string docName)
+        public static void CreateDocX(string md, string docName)
         {
-            List<string> md = StripDoubleLines(content);
-            Body body = Convert(md);
+            Body body = MarkdownToDocBody(md);
             SaveDocX(body, docName);
         }
-        
+
+        private static Body MarkdownToDocBody(string RawMarkdown)
+        {
+            Body body = new Body();
+            SkipNextLine = false;
+            Buffer = @"";
+            int index = 0;
+
+            List<string> md = StripDoubleLines(RawMarkdown);
+
+            foreach (string line in md)
+            {
+                if (SkipNextLine)
+                {
+                    index += 1;
+                    SkipNextLine = !SkipNextLine;
+                    continue;
+                }
+
+                Buffer = line;
+                string lookahead = index + 1 != md.Count ? md[index + 1] : "";
+
+                ParagraphProperties pPr = GenerateParagraphProperties(lookahead);
+                Paragraph p = new Paragraph();
+                p.Append(pPr);
+                
+                p = GenerateRuns(p, Buffer);
+                body.Append(p);
+                index += 1;
+            }
+        /*
+      A space for playing with OpenXML elements
+         *
+            Paragraph para = new Paragraph();
+            Run r = new Run();
+            Text t = new Text("A Test");
+            r.Append(t);
+            para.Append(r);
+            body.Append(para);
+        */
+            return body;
+        }
+
         private static List<string> StripDoubleLines(string text)
         {
             List<string> md = new List<string>();
@@ -79,46 +122,6 @@ namespace MarkdownToOpenXML
             return md;
         }
 
-        private static Body Convert(List<string> md)
-        {
-            Body body = new Body();
-            SkipNextLine = false;
-            Buffer = @"";
-            int index = 0;
-            
-            foreach (string line in md)
-            {
-                if (SkipNextLine)
-                {
-                    index += 1;
-                    SkipNextLine = !SkipNextLine;
-                    continue;
-                }
-
-                Buffer = line;
-                string lookahead = index + 1 != md.Count ? md[index + 1] : "";
-
-                ParagraphProperties pPr = GenerateParagraphProperties(lookahead);
-                Paragraph p = new Paragraph();
-                p.Append(pPr);
-                
-                p = GenerateRuns(p, Buffer);
-                body.Append(p);
-                index += 1;
-            }
-        /*
-      A space for playing with OpenXML elements
-         *
-            Paragraph para = new Paragraph();
-            Run r = new Run();
-            Text t = new Text("A Test");
-            r.Append(t);
-            para.Append(r);
-            body.Append(para);
-        */
-            return body;
-        }
-
         private static Ranges<int> FindMatches(Regex rx, string s, ref Ranges<int> TokenRange)
         {
             Ranges<int> ranges = new Ranges<int>();
@@ -131,20 +134,20 @@ namespace MarkdownToOpenXML
                 int eToken = m.Groups[3].Index;
                 int endStr = m.Groups[3].Index + m.Groups[3].Length;
 
-                Range<int> StartToken = new Range<int>();
-                StartToken.Minimum = sToken;
-                StartToken.Maximum = match - 1;
-                TokenRange.add(StartToken);
-
-                Range<int> MatchRange = new Range<int>();
-                MatchRange.Minimum = match;
-                MatchRange.Maximum = eToken - 1;
-                ranges.add(MatchRange);
-
-                Range<int> EndToken = new Range<int>();
-                EndToken.Minimum = eToken;
-                EndToken.Maximum = endStr - 1;
-                TokenRange.add(EndToken);
+                TokenRange.add(new Range<int>()
+                { 
+                    Minimum = sToken, Maximum = match - 1
+                });
+                
+                ranges.add(new Range<int>()
+                {
+                    Minimum = match, Maximum = eToken - 1
+                });
+                
+                TokenRange.add(new Range<int>()
+                {
+                    Minimum = eToken, Maximum = endStr - 1
+                });
             }
 
             return ranges;
@@ -153,29 +156,17 @@ namespace MarkdownToOpenXML
         private static ParagraphProperties GenerateParagraphProperties(string lookahead)
         {
             ParagraphProperties pPr = new ParagraphProperties();
+
             Match isHeader1 = Regex.Match(Buffer, @"^#");
             String sTest = Regex.Replace(lookahead, @"\w", "");
             Match isSetextHeader1 = Regex.Match(sTest, @"[=]{2,}");
 
-            Match numberedList = Regex.Match(Buffer, @"^\\d\\.");
-
-            // Set Paragraph Styles
-            if (numberedList.Success)
-            {
-                // Doesnt work currently, needs NumberingDefinitions adding in filecreation
-                Buffer = Buffer.Substring(2);
-                NumberingProperties nPr = new NumberingProperties(
-                    new NumberingLevelReference() { Val = 0 },
-                    new NumberingId() { Val = 1 }
-                );
-
-                pPr.Append(nPr);
-            }
-            
             if (isHeader1.Success || isSetextHeader1.Success)
             {
-                ParagraphStyleId paragraphStyleId1 = new ParagraphStyleId() { Val = "Heading1" };
-                pPr.Append(paragraphStyleId1);
+                pPr.Append(new ParagraphStyleId()
+                {
+                    Val = "Heading1"
+                });
 
                 if (isHeader1.Success)
                 {
@@ -188,6 +179,41 @@ namespace MarkdownToOpenXML
                 }
 
                 if (isSetextHeader1.Success) SkipNextLine = true;
+            }
+
+            Dictionary<string, Match> Alignment = new Dictionary<string, Match>();
+            Alignment.Add("center", Regex.Match(Buffer, @"^><"));
+            Alignment.Add("left", Regex.Match(Buffer, @"^<<"));
+            Alignment.Add("right", Regex.Match(Buffer, @"^>>"));
+            Alignment.Add("justify", Regex.Match(Buffer, @"^<>"));
+
+            foreach (KeyValuePair<string, Match> match in Alignment)
+            {
+                if (match.Value.Success)
+                {
+                    if (match.Key == "center") pPr.Append(new Justification() { Val = JustificationValues.Center });
+                    if (match.Key == "left") pPr.Append(new Justification() { Val = JustificationValues.Left });
+                    if (match.Key == "right") pPr.Append(new Justification() { Val = JustificationValues.Right });
+                    if (match.Key == "justify") pPr.Append(new Justification() { Val = JustificationValues.Distribute });
+
+                    Buffer = Buffer.Substring(2);
+                    break;
+                }
+            }
+            
+            Match numberedList = Regex.Match(Buffer, @"^\\d\\.");
+
+            // Set Paragraph Styles
+            if (numberedList.Success)
+            {
+                // Doesnt work currently, needs NumberingDefinitions adding in filecreation.cs
+                Buffer = Buffer.Substring(2);
+                NumberingProperties nPr = new NumberingProperties(
+                    new NumberingLevelReference() { Val = 0 },
+                    new NumberingId() { Val = 1 }
+                );
+
+                pPr.Append(nPr);
             }
 
             return pPr;
@@ -277,46 +303,6 @@ namespace MarkdownToOpenXML
 
                 package.MainDocumentPart.Document.AppendChild(body);
                 package.MainDocumentPart.Document.Save();
-            }
-        }
-        
-        public class Ranges<T> where T : IComparable<T>
-        {
-            private List<Range<T>> rangelist = new List<Range<T>>();
-
-            public void add(Range<T> range)
-            {
-                rangelist.Add(range);
-            }
-
-            public int Count()
-            {
-                return rangelist.Count;
-            }
-
-            public Boolean ContainsValue(T value)
-            {
-                foreach (Range<T> range in rangelist)
-                {
-                    if (range.ContainsValue(value)) return true;
-                }
-
-                return false;
-            }
-        }
-        
-        public class Range<T> where T : IComparable<T>
-        {
-            public T Minimum { get; set; }
-            public T Maximum { get; set; }
-            
-            public override string ToString() { return String.Format("[{0} - {1}]", Minimum, Maximum); }
-
-            public Boolean IsValid() { return Minimum.CompareTo(Maximum) <= 0; }
-
-            public Boolean ContainsValue(T value)
-            {
-                return (Minimum.CompareTo(value) <= 0) && (value.CompareTo(Maximum) <= 0);
             }
         }
     }

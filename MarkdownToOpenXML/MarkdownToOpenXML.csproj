@@ -41,6 +41,8 @@
     <Reference Include="WindowsBase" />
   </ItemGroup>
   <ItemGroup>
+    <Compile Include="Classes\Range.cs" />
+    <Compile Include="Classes\Ranges.cs" />
     <Compile Include="FileCreation.cs" />
     <Compile Include="MarkdownToOpenXML.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
