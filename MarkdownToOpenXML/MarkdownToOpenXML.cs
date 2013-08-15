@@ -152,6 +152,28 @@ namespace MarkdownToOpenXML
 
             return ranges;
         }
+        
+        private static Ranges<int> FindTabs(Regex rx, string s, ref Ranges<int> TokenRange)
+        {
+            Ranges<int> ranges = new Ranges<int>();
+            MatchCollection mc = rx.Matches(s);
+
+            foreach (Match m in mc)
+            {
+                ranges.add(new Range<int>()
+                {
+                    Minimum = m.Index,
+                    Maximum = m.Index
+                });
+
+                TokenRange.add(new Range<int>()
+                {
+                    Minimum = m.Index,
+                    Maximum = m.Index + m.Length-1
+                });
+            }
+            return ranges;
+        }
 
         private static ParagraphProperties GenerateParagraphProperties(string lookahead)
         {
@@ -181,21 +203,18 @@ namespace MarkdownToOpenXML
                 if (isSetextHeader1.Success) SkipNextLine = true;
             }
 
-            Dictionary<string, Match> Alignment = new Dictionary<string, Match>();
-            Alignment.Add("center", Regex.Match(Buffer, @"^><"));
-            Alignment.Add("left", Regex.Match(Buffer, @"^<<"));
-            Alignment.Add("right", Regex.Match(Buffer, @"^>>"));
-            Alignment.Add("justify", Regex.Match(Buffer, @"^<>"));
+            Dictionary<JustificationValues, Match> Alignment = new Dictionary<JustificationValues, Match>();
+            
+            Alignment.Add(JustificationValues.Center, Regex.Match(Buffer, @"^><"));
+            Alignment.Add(JustificationValues.Left, Regex.Match(Buffer, @"^<<"));
+            Alignment.Add(JustificationValues.Right, Regex.Match(Buffer, @"^>>"));
+            Alignment.Add(JustificationValues.Distribute, Regex.Match(Buffer, @"^<>"));
 
-            foreach (KeyValuePair<string, Match> match in Alignment)
+            foreach (KeyValuePair<JustificationValues, Match> match in Alignment)
             {
                 if (match.Value.Success)
                 {
-                    if (match.Key == "center") pPr.Append(new Justification() { Val = JustificationValues.Center });
-                    if (match.Key == "left") pPr.Append(new Justification() { Val = JustificationValues.Left });
-                    if (match.Key == "right") pPr.Append(new Justification() { Val = JustificationValues.Right });
-                    if (match.Key == "justify") pPr.Append(new Justification() { Val = JustificationValues.Distribute });
-
+                    pPr.Append(new Justification() { Val = match.Key });
                     Buffer = Buffer.Substring(2);
                     break;
                 }
@@ -242,12 +261,15 @@ namespace MarkdownToOpenXML
                 pUnderline = Patterns[rExKey.Underscore];
             }
 
+
             Ranges<int> Tokens = new Ranges<int>();
             Ranges<int> Bold = FindMatches(pBold, Buffer, ref Tokens);
             Ranges<int> Italic = FindMatches(pItalic, Buffer, ref Tokens);
             Ranges<int> Underline = FindMatches(pUnderline, Buffer, ref Tokens);
 
-            if ((Bold.Count() + Italic.Count() + Underline.Count()) == 0)
+            Ranges<int> Tabs = FindTabs(new Regex(@"(\\t|[\\ ]{4})"), Buffer, ref Tokens);
+
+            if ((Bold.Count() + Italic.Count() + Underline.Count() + Tabs.Count()) == 0)
             {
                 Run run = new Run();
                 run.Append(new Text(Buffer)
@@ -265,24 +287,30 @@ namespace MarkdownToOpenXML
 
                 while (CurrentPosition < Buffer.Length)
                 {
-                    if (!Tokens.ContainsValue(CurrentPosition))
+                    if (!Tokens.ContainsValue(CurrentPosition) || Tabs.ContainsValue(CurrentPosition))
                     {
                         run = new Run();
 
-                        RunProperties rPr = new RunProperties();
-                        if (Bold.ContainsValue(CurrentPosition)) rPr.Append(new Bold() { Val = new OnOffValue(true) });
-                        if (Italic.ContainsValue(CurrentPosition)) rPr.Append(new Italic());
-                        if (Underline.ContainsValue(CurrentPosition)) rPr.Append(new Underline() { Val = DocumentFormat.OpenXml.Wordprocessing.UnderlineValues.Single });
-                        run.Append(rPr);
-
-                        string TextBuffer = Buffer.Substring(CurrentPosition, 1);
-                        run.Append(new Text(TextBuffer)
+                        if (Tabs.ContainsValue(CurrentPosition))
                         {
-                            Space = SpaceProcessingModeValues.Preserve
-                        });
+                            run.Append(new TabChar());
+                        }
+                        else
+                        {
+                            RunProperties rPr = new RunProperties();
+                            if (Bold.ContainsValue(CurrentPosition)) rPr.Append(new Bold() { Val = new OnOffValue(true) });
+                            if (Italic.ContainsValue(CurrentPosition)) rPr.Append(new Italic());
+                            if (Underline.ContainsValue(CurrentPosition)) rPr.Append(new Underline() { Val = DocumentFormat.OpenXml.Wordprocessing.UnderlineValues.Single });
+                            run.Append(rPr);
+
+                            string TextBuffer = Buffer.Substring(CurrentPosition, 1);
+                            run.Append(new Text(TextBuffer)
+                            {
+                                Space = SpaceProcessingModeValues.Preserve
+                            });
+                        }
                         p.Append(run);
                     }
-
                     CurrentPosition++;
                 }
             }
