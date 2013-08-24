@@ -59,21 +59,25 @@ namespace MarkdownToOpenXML
                 PrimaryStyle = true
             });
             Style Normal = GenerateNormal();
-
-            latentStyles1.Append(new LatentStyleExceptionInfo()
-            {
-                Name = "Heading 1",
-                UiPriority = 9,
-                SemiHidden = false,
-                UnhideWhenUsed = false,
-                PrimaryStyle = true
-            });
-            Style Header1 = GenerateHeader1();
-
+            
             doc_styles.Append(document_defaults);
             doc_styles.Append(latentStyles1);
             doc_styles.Append(Normal);
-            doc_styles.Append(Header1);
+
+            for (int i = 1; i <= 7; i++)
+            {
+                latentStyles1.Append(new LatentStyleExceptionInfo()
+                {
+                    Name = "Heading "+i,
+                    UiPriority = 9,
+                    SemiHidden = false,
+                    UnhideWhenUsed = false,
+                    PrimaryStyle = true
+                });
+                Style Header = GenerateHeader(i);
+
+                doc_styles.Append(Header);
+            }
 
             part.Styles = doc_styles;
         }
@@ -121,31 +125,32 @@ namespace MarkdownToOpenXML
             return Style_Normal;
         }
 
-        private Style GenerateHeader1()
+        private Style GenerateHeader(int id)
         {
-            Style Style_Header1 = new Style() { Type = StyleValues.Paragraph, StyleId = "Heading1" };
+            Style Style_Header1 = new Style() { Type = StyleValues.Paragraph, StyleId = "Heading" + id };
 
-            StyleParagraphProperties ParagraphProperties_Header1 = new StyleParagraphProperties();
-            ParagraphProperties_Header1.Append(new KeepNext());
-            ParagraphProperties_Header1.Append(new KeepLines());
-            ParagraphProperties_Header1.Append(new SpacingBetweenLines() { Before = "480", After = "0" });
-            ParagraphProperties_Header1.Append(new OutlineLevel() { Val = 0 });
-            Style_Header1.Append(ParagraphProperties_Header1);
+            StyleParagraphProperties ParagraphProperties_Header = new StyleParagraphProperties();
+            ParagraphProperties_Header.Append(new KeepNext());
+            ParagraphProperties_Header.Append(new KeepLines());
+            ParagraphProperties_Header.Append(new SpacingBetweenLines() { Before = "480", After = "0" });
+            ParagraphProperties_Header.Append(new OutlineLevel() { Val = 0 });
+            Style_Header1.Append(ParagraphProperties_Header);
 
-            StyleRunProperties RunProperties_Header1 = new StyleRunProperties();
+            StyleRunProperties RunProperties_Header = new StyleRunProperties();
             RunFonts font = new RunFonts();
             font.Ascii = "Arial";
-            RunProperties_Header1.Append(font);
-            RunProperties_Header1.Append(new Bold());
-            RunProperties_Header1.Append(new BoldComplexScript());
-            RunProperties_Header1.Append(new FontSize() { Val = "24" });
-            RunProperties_Header1.Append(new FontSizeComplexScript() { Val = "24" });
-            Style_Header1.Append(RunProperties_Header1);
+            RunProperties_Header.Append(font);
+            RunProperties_Header.Append(new Bold());
+            RunProperties_Header.Append(new BoldComplexScript());
+            string size = (26 - (id * 2)).ToString();
+            RunProperties_Header.Append(new FontSize() { Val = size });
+            RunProperties_Header.Append(new FontSizeComplexScript() { Val = size });
+            Style_Header1.Append(RunProperties_Header);
 
-            Style_Header1.Append(new StyleName() { Val = "Heading 1" });
+            Style_Header1.Append(new StyleName() { Val = "Heading " + id });
             Style_Header1.Append(new BasedOn() { Val = "Normal" });
             Style_Header1.Append(new NextParagraphStyle() { Val = "Normal" });
-            Style_Header1.Append(new LinkedStyle() { Val = "Heading1Char" });
+            Style_Header1.Append(new LinkedStyle() { Val = "Heading" + id + "Char" });
             Style_Header1.Append(new UIPriority() { Val = 9 });
             Style_Header1.Append(new PrimaryStyle());
             Style_Header1.Append(new Rsid() { Val = "00AF6F24" });
