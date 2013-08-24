@@ -179,29 +179,30 @@ namespace MarkdownToOpenXML
         {
             ParagraphProperties pPr = new ParagraphProperties();
 
-            Match isHeader1 = Regex.Match(Buffer, @"^#");
-            String sTest = Regex.Replace(lookahead, @"\w", "");
-            Match isSetextHeader1 = Regex.Match(sTest, @"[=]{2,}");
+            int headerLevel = Buffer.TakeWhile((x) => x == '#').Count();
 
-            if (isHeader1.Success || isSetextHeader1.Success)
+            if (headerLevel > 0)
+                Buffer = Buffer.TrimStart('#').TrimEnd('#').Trim();
+            else
             {
+                String sTest = Regex.Replace(lookahead, @"\w", "");
+                Match isSetextHeader1 = Regex.Match(sTest, @"[=]{2,}");
+                if (Regex.Match(sTest, @"[=]{2,}").Success)
+                {
+                    headerLevel = 1;
+                    SkipNextLine = true;
+                }
+                if (Regex.Match(sTest, @"[-]{2,}").Success)
+                {
+                    headerLevel = 2;
+                    SkipNextLine = true;
+                }
+            }
+            if (headerLevel > 0)
                 pPr.Append(new ParagraphStyleId()
                 {
-                    Val = "Heading1"
+                    Val = "Heading" + headerLevel
                 });
-
-                if (isHeader1.Success)
-                {
-                    Buffer = Buffer.Substring(1);
-
-                    // Strip the # from the end of the line if there is one
-                    if (Regex.Match(Buffer, @"#$").Success) Buffer = Buffer.Substring(0, Buffer.Length - 1);
-
-                    Buffer = Buffer.Trim();
-                }
-
-                if (isSetextHeader1.Success) SkipNextLine = true;
-            }
 
             Dictionary<JustificationValues, Match> Alignment = new Dictionary<JustificationValues, Match>();
             
