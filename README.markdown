@@ -11,5 +11,5 @@ More to come.
 
 ## Building project
 
-In order to build the project you will need to install the [Open XML SDK](http://www.microsoft.com/en-ca/download/details.aspx?id=5124)
-and add a reference to **DocumentFormat.OpenXML**
+In order to build the project you will need to install the [Open XML SDK 2.5](http://www.microsoft.com/en-ca/download/details.aspx?id=30425)
+and add a reference to **DocumentFormat.OpenXML** if it does not exist
