@@ -7,3 +7,9 @@ Very rough beginnings, currently only supports header1 & normal styles & bold, i
 [Getting started](https://github.com/dangerdan/MarkdownToOpenXML/wiki/Getting-started)
 
 More to come.
+
+
+## Building project
+
+In order to build the project you will need to install the [Open XML SDK](http://www.microsoft.com/en-ca/download/details.aspx?id=5124)
+and add a reference to **DocumentFormat.OpenXML**
