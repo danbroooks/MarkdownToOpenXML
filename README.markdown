@@ -9,6 +9,10 @@ and add a reference to **DocumentFormat.OpenXML** if it does not exist
 
 ## Getting started ##
 
+### Usage ###
+
+The main method in MD2OXML is CreateDocX, which takes two string values - the markdown, and the path where you want to store the file:
+
 ```c#
 using MarkdownToOpenXML;
 
@@ -16,13 +20,49 @@ string markdown = @"# This is a header";
 MD2OXML.CreateDocX(markdown, @"C:\MyMarkdown.docx");
 ```
 
-By default the MD2OXML will use the standard markdown syntax:
+### Current syntax support ###
+
+#### Headers ####
+
+Headers can be produced either the atx style or setext style.
+
+##### ATX #####
+
+An ATX style header has a number of hashes at the beginning of the line to signify a header:
 
 ```
-# Header1 text
+# This is an H1
 
-Two newlines represents a new paragraph, without the # at the start this will output normal text
+## This is an H2
 
+###### This is an H6
+```
+
+You can optionally close atx headers:
+
+```
+# This is an H1 #
+
+## This is an H2 ##
+
+### This is an H3 ###
+```
+
+##### Setext #####
+
+A setext header is underlined by either equal signs or dashes on the next line:
+
+```
+This is an H1
+=============
+
+This is an H2
+-------------
+```
+
+#### Formatting ####
+
+```
 *Italic* out puts italic text and **bold** outputs bold text
 ```
 
@@ -43,3 +83,14 @@ _Underlined text_
 ```
 
 In both cases, syntax markers can be mixed and matched as you please.
+
+#### Alignment ####
+
+This is something that isn't seen in markdown parsers for the web as placement would normally be dealt with by CSS styles. However MD2OXML supports inline alignment statements that begin at the start of a line:
+
+```
+>< This centers the text
+<> This fully justifies the text
+>> Right alignment
+<< Left alignment
+```
