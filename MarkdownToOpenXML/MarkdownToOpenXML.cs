@@ -313,7 +313,7 @@ namespace MarkdownToOpenXML
                         p.Append(run);
                     }
                     CurrentPosition++;
-                }
+                };
             }
             return p;
         }
