@@ -1,20 +1,14 @@
-﻿
-namespace MarkdownToOpenXML
+﻿namespace MarkdownToOpenXML
 {
+    using DocumentFormat.OpenXml;
+    using DocumentFormat.OpenXml.Packaging;
+    using DocumentFormat.OpenXml.Wordprocessing;
+    using MarkdownToOpenXML.Classes;
     using System;
     using System.Collections.Generic;
     using System.IO;
     using System.Linq;
-    using System.Text;
     using System.Text.RegularExpressions;
-    using System.Threading.Tasks;
-
-    using DocumentFormat.OpenXml;
-    using DocumentFormat.OpenXml.Packaging;
-    using DocumentFormat.OpenXml.Wordprocessing;
-
-    using MarkdownToOpenXML;
-    using MarkdownToOpenXML.Classes;
 
     public class MD2OXML
     {
@@ -22,14 +16,17 @@ namespace MarkdownToOpenXML
         private static string Buffer = "";
 
         private static bool CustomMode;
+
         public static bool customMode
         {
             set { CustomMode = value; }
         }
 
+        private static WordprocessingDocument package;
+
         private enum rExKey
         {
-            DblAsterisk, Asterisk, Grave, Underscore
+            DblAsterisk, Asterisk, Grave, Underscore, Hyperlink_description, Hyperlink
         }
 
         private static Dictionary<rExKey, Regex> Patterns = new Dictionary<rExKey, Regex>()
@@ -38,10 +35,16 @@ namespace MarkdownToOpenXML
             { rExKey.Asterisk, new Regex("(?<!\\*)[^\\*]?(\\*)([^\\*].+?)(\\*)[^\\*]") },
             { rExKey.Grave, new Regex("(?<!`)[^`]?(`)([^`].+?)(\\`)[^`]?") },
             { rExKey.Underscore, new Regex("(?<!_)[^_]?(_)([^_].+?)(_)[^_]?") },
+            { rExKey.Hyperlink_description, new Regex(@"\[[a-z]+\]\((?:[a-z]+://|www\.|ftp\.)[-A-Z0-9+&@#/%=~_|$?!:,.]*[A-Z0-9+&@#/%=~_|$]\)",RegexOptions.IgnoreCase)},
+            { rExKey.Hyperlink, new Regex(@"\<(?:[a-z]+://|www\.|ftp\.)[-A-Z0-9+&@#/%=~_|$?!:,.]*[A-Z0-9+&@#/%=~_|$]\>",RegexOptions.IgnoreCase)},
         };
 
         public static void CreateDocX(string md, string docName)
         {
+            package = WordprocessingDocument.Create(docName, WordprocessingDocumentType.Document);
+            package.AddMainDocumentPart();
+            package.MainDocumentPart.Document = new Document();
+
             Body body = MarkdownToDocBody(md);
             SaveDocX(body, docName);
         }
@@ -70,21 +73,22 @@ namespace MarkdownToOpenXML
                 ParagraphProperties pPr = GenerateParagraphProperties(lookahead);
                 Paragraph p = new Paragraph();
                 p.Append(pPr);
-                
+
                 p = GenerateRuns(p, Buffer);
+
                 body.Append(p);
                 index += 1;
             }
-        /*
-      A space for playing with OpenXML elements
-         *
-            Paragraph para = new Paragraph();
-            Run r = new Run();
-            Text t = new Text("A Test");
-            r.Append(t);
-            para.Append(r);
-            body.Append(para);
-        */
+            /*
+          A space for playing with OpenXML elements
+             *
+                Paragraph para = new Paragraph();
+                Run r = new Run();
+                Text t = new Text("A Test");
+                r.Append(t);
+                para.Append(r);
+                body.Append(para);
+            */
             return body;
         }
 
@@ -126,7 +130,7 @@ namespace MarkdownToOpenXML
         {
             Ranges<int> ranges = new Ranges<int>();
             MatchCollection mc = rx.Matches(s);
-            
+
             foreach (Match m in mc)
             {
                 int sToken = m.Groups[1].Index;
@@ -135,24 +139,59 @@ namespace MarkdownToOpenXML
                 int endStr = m.Groups[3].Index + m.Groups[3].Length;
 
                 TokenRange.add(new Range<int>()
-                { 
-                    Minimum = sToken, Maximum = match - 1
+                {
+                    Minimum = sToken,
+                    Maximum = match - 1
                 });
-                
+
                 ranges.add(new Range<int>()
                 {
-                    Minimum = match, Maximum = eToken - 1
+                    Minimum = match,
+                    Maximum = eToken - 1
                 });
-                
+
                 TokenRange.add(new Range<int>()
                 {
-                    Minimum = eToken, Maximum = endStr - 1
+                    Minimum = eToken,
+                    Maximum = endStr - 1
                 });
             }
 
             return ranges;
         }
-        
+
+        private static void AppendHyperlink(string Buffer, ref Paragraph p, bool Description)
+        {
+            Text text;
+            string path;
+
+            if (Description)
+            {
+                text = new Text(Buffer.Split(']')[0].Trim('['));
+
+                path = Buffer.Split('(')[1].Trim(')');
+            }
+            else
+            {
+                path = Buffer.TrimStart('<').TrimEnd('>').Trim();
+                text = new Text(path);
+            }
+
+            MainDocumentPart mainPart = package.MainDocumentPart;
+            HyperlinkRelationship rel = mainPart.AddHyperlinkRelationship(new System.Uri(path, System.UriKind.Absolute),true);
+            string relationshipId = rel.Id;
+            p.Append(
+                new Hyperlink(
+                    new ProofError() { Type = ProofingErrorValues.GrammarStart },
+                    new Run(
+                        new RunProperties(
+                            new Underline() { Val = UnderlineValues.Single },
+                            new Color() { Val = "0000FF" },
+                            new RunStyle() { Val = "Hyperlink" }),
+                        text
+                    )) { Id = relationshipId });   
+        }
+
         private static Ranges<int> FindTabs(Regex rx, string s, ref Ranges<int> TokenRange)
         {
             Ranges<int> ranges = new Ranges<int>();
@@ -169,7 +208,7 @@ namespace MarkdownToOpenXML
                 TokenRange.add(new Range<int>()
                 {
                     Minimum = m.Index,
-                    Maximum = m.Index + m.Length-1
+                    Maximum = m.Index + m.Length - 1
                 });
             }
             return ranges;
@@ -205,7 +244,7 @@ namespace MarkdownToOpenXML
                 });
 
             Dictionary<JustificationValues, Match> Alignment = new Dictionary<JustificationValues, Match>();
-            
+
             Alignment.Add(JustificationValues.Center, Regex.Match(Buffer, @"^><"));
             Alignment.Add(JustificationValues.Left, Regex.Match(Buffer, @"^<<"));
             Alignment.Add(JustificationValues.Right, Regex.Match(Buffer, @"^>>"));
@@ -220,7 +259,7 @@ namespace MarkdownToOpenXML
                     break;
                 }
             }
-            
+
             Match numberedList = Regex.Match(Buffer, @"^\\d\\.");
 
             // Set Paragraph Styles
@@ -241,27 +280,25 @@ namespace MarkdownToOpenXML
 
         private static Paragraph GenerateRuns(Paragraph p, string Buffer)
         {
-            // Calculate positions of all tokens and use this to set 
+            // Calculate positions of all tokens and use this to set
             // run styles when iterating through the string
 
-            // in the same calculation note down location of tokens 
+            // in the same calculation note down location of tokens
             // so they can be ignored when loading strings into the buffer
-            
-            Regex pBold, pItalic, pUnderline;
+
+            // Is this really needed?
+            Regex pBold, pItalic, pUnderline, pHyperlink_description, pHyperlink;
 
             if (!CustomMode)
-            {
-                pBold = Patterns[rExKey.DblAsterisk];
                 pItalic = Patterns[rExKey.Asterisk];
-                pUnderline = Patterns[rExKey.Underscore];
-            }
             else
-            {
-                pBold = Patterns[rExKey.DblAsterisk];
                 pItalic = Patterns[rExKey.Grave];
-                pUnderline = Patterns[rExKey.Underscore];
-            }
 
+            pUnderline = Patterns[rExKey.Underscore];
+            pBold = Patterns[rExKey.DblAsterisk];
+
+            pHyperlink = Patterns[rExKey.Hyperlink];
+            pHyperlink_description = Patterns[rExKey.Hyperlink_description];
 
             Ranges<int> Tokens = new Ranges<int>();
             Ranges<int> Bold = FindMatches(pBold, Buffer, ref Tokens);
@@ -270,7 +307,16 @@ namespace MarkdownToOpenXML
 
             Ranges<int> Tabs = FindTabs(new Regex(@"(\\t|[\\ ]{4})"), Buffer, ref Tokens);
 
-            if ((Bold.Count() + Italic.Count() + Underline.Count() + Tabs.Count()) == 0)
+            // TODO: make this a boolean , overload FindMatches or something.
+            Ranges<int> Hyperlinks_description = FindMatches(pHyperlink_description, Buffer, ref Tokens);
+            Ranges<int> Hyperlinks = FindMatches(pHyperlink, Buffer, ref Tokens);
+
+            if ((Bold.Count()
+                + Italic.Count()
+                + Underline.Count()
+                + Tabs.Count()
+                + Hyperlinks_description.Count()
+                + Hyperlinks.Count()) == 0)
             {
                 Run run = new Run();
                 run.Append(new Text(Buffer)
@@ -285,54 +331,60 @@ namespace MarkdownToOpenXML
                 Run run;
 
                 // This needs optimizing so it builds a string buffer before adding the run itself
-
-                while (CurrentPosition < Buffer.Length)
+                // might need to make this into a Switch statement also
+                if (Hyperlinks_description.Count() == 1)
                 {
-                    if (!Tokens.ContainsValue(CurrentPosition) || Tabs.ContainsValue(CurrentPosition))
+                    AppendHyperlink(Buffer, ref p, true);
+                }
+                else if (Hyperlinks.Count() == 1)
+                {
+                    AppendHyperlink(Buffer, ref p, false);
+                }
+                else
+                {
+                    while (CurrentPosition < Buffer.Length)
                     {
-                        run = new Run();
-
-                        if (Tabs.ContainsValue(CurrentPosition))
+                        if (!Tokens.ContainsValue(CurrentPosition) || Tabs.ContainsValue(CurrentPosition))
                         {
-                            run.Append(new TabChar());
-                        }
-                        else
-                        {
-                            RunProperties rPr = new RunProperties();
-                            if (Bold.ContainsValue(CurrentPosition)) rPr.Append(new Bold() { Val = new OnOffValue(true) });
-                            if (Italic.ContainsValue(CurrentPosition)) rPr.Append(new Italic());
-                            if (Underline.ContainsValue(CurrentPosition)) rPr.Append(new Underline() { Val = DocumentFormat.OpenXml.Wordprocessing.UnderlineValues.Single });
-                            run.Append(rPr);
+                            run = new Run();
 
-                            string TextBuffer = Buffer.Substring(CurrentPosition, 1);
-                            run.Append(new Text(TextBuffer)
+                            if (Tabs.ContainsValue(CurrentPosition))
                             {
-                                Space = SpaceProcessingModeValues.Preserve
-                            });
+                                run.Append(new TabChar());
+                            }
+                            else
+                            {
+                                RunProperties rPr = new RunProperties();
+                                if (Bold.ContainsValue(CurrentPosition)) rPr.Append(new Bold() { Val = new OnOffValue(true) });
+                                if (Italic.ContainsValue(CurrentPosition)) rPr.Append(new Italic());
+                                if (Underline.ContainsValue(CurrentPosition)) rPr.Append(new Underline() { Val = DocumentFormat.OpenXml.Wordprocessing.UnderlineValues.Single });
+                                run.Append(rPr);
+
+                                string TextBuffer = Buffer.Substring(CurrentPosition, 1);
+                                run.Append(new Text(TextBuffer)
+                                {
+                                    Space = SpaceProcessingModeValues.Preserve
+                                });
+                            }
+                            p.Append(run);
                         }
-                        p.Append(run);
-                    }
-                    CurrentPosition++;
-                };
+                        CurrentPosition++;
+                    };
+                }
             }
             return p;
         }
 
         private static void SaveDocX(Body body, String docName)
         {
-            // Create a Wordprocessing document. 
-            using (WordprocessingDocument package = WordprocessingDocument.Create(docName, WordprocessingDocumentType.Document))
-            {
-                package.AddMainDocumentPart();
-                package.MainDocumentPart.Document = new Document();
+            // Create a Wordprocessing document.
+            StyleDefinitionsPart styleDefinitionsPart1 = package.MainDocumentPart.AddNewPart<StyleDefinitionsPart>("rId1");
+            MD2OXMLFile file = new MD2OXMLFile();
+            file.GenerateStyleDefinitionsPart1Content(styleDefinitionsPart1);
 
-                StyleDefinitionsPart styleDefinitionsPart1 = package.MainDocumentPart.AddNewPart<StyleDefinitionsPart>("rId1");
-                MD2OXMLFile file = new MD2OXMLFile();
-                file.GenerateStyleDefinitionsPart1Content(styleDefinitionsPart1);
-
-                package.MainDocumentPart.Document.AppendChild(body);
-                package.MainDocumentPart.Document.Save();
-            }
+            package.MainDocumentPart.Document.AppendChild(body);
+            package.MainDocumentPart.Document.Save();
+            package.Dispose();
         }
     }
 }
