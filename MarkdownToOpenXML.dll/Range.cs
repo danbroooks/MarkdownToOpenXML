@@ -1,5 +1,5 @@
 ﻿
-namespace MarkdownToOpenXML.Classes
+namespace MarkdownToOpenXML
 {
     using System;
 

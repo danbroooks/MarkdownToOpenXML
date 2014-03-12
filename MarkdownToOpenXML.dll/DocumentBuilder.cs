@@ -19,9 +19,31 @@ namespace MarkdownToOpenXML
     using Sty = DocumentFormat.OpenXml.Wordprocessing.Style;
     using Clr = DocumentFormat.OpenXml.Wordprocessing.Color;
 
-    public class MD2OXMLFile
-    {        
-        public void GenerateStyleDefinitionsPart1Content(StyleDefinitionsPart part)
+    public class DocumentBuilder
+    {
+        private Document document;
+
+        public DocumentBuilder(Body body)
+        {
+            document = new Document();
+            document.AppendChild(body);
+        }
+        
+        public void SaveTo(string path)
+        {
+            using (WordprocessingDocument package = WordprocessingDocument.Create(path, WordprocessingDocumentType.Document))
+            {
+                package.AddMainDocumentPart();
+                package.MainDocumentPart.Document = document;
+
+                StyleDefinitionsPart styleDefinitionsPart1 = package.MainDocumentPart.AddNewPart<StyleDefinitionsPart>("rId1");
+                GenerateStyleDefinitionsPart1Content(styleDefinitionsPart1);
+                
+                package.MainDocumentPart.Document.Save();
+            }
+        }
+
+        private void GenerateStyleDefinitionsPart1Content(StyleDefinitionsPart part)
         {
             Styles doc_styles = GenerateDocumentStyles();
             DocDefaults document_defaults = new DocDefaults();

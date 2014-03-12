@@ -86,7 +86,7 @@ In both cases, syntax markers can be mixed and matched as you please.
 
 #### Alignment ####
 
-This is something that isn't seen in markdown parsers for the web as placement would normally be dealt with by CSS styles. However MD2OXML supports inline alignment statements that begin at the start of a line:
+This is something that isn't seen in markdown parsers for the web as placement would normally be dealt with by CSS styles. However MD2OXML supports inline alignment statements that should be placed at the start of a line:
 
 ```
 >< This centers the text
