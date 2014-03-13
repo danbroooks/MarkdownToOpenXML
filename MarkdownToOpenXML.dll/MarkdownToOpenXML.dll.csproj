@@ -42,6 +42,7 @@
   </ItemGroup>
   <ItemGroup>
     <Compile Include="ParagraphBuilder.cs" />
+    <Compile Include="PatternMatcher.cs" />
     <Compile Include="RunBuilder.cs" />
     <Compile Include="Range.cs" />
     <Compile Include="Ranges.cs" />

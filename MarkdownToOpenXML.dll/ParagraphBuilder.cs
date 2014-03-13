@@ -25,11 +25,16 @@ namespace MarkdownToOpenXML
             this.next = next;
         }
 
-        public Paragraph obj()
+        public Paragraph Build()
         {
-            DoAlignment();
+            if (MD2OXML.ExtendedMode)
+            {
+                DoAlignment();
+            }
+
             DoHeaders();
             DoNumberedLists();
+            
             para.Append(prop);
             RunBuilder run = new RunBuilder(current, para);
             return run.para;

@@ -17,7 +17,7 @@ namespace MarkdownToOpenXML
 
     public class MD2OXML
     {
-        public static bool CustomMode;
+        public static bool ExtendedMode = true;
 
         private bool SkipNextLine = false;
         private string[] lines;
@@ -41,7 +41,7 @@ namespace MarkdownToOpenXML
         {
             Body body = new Body();
             int index = 0;
-
+            
             lines = md.Split(new string[] { "\r\n", "\n" }, StringSplitOptions.None);
             lineCount = lines.Count();
 
@@ -54,9 +54,9 @@ namespace MarkdownToOpenXML
                     continue;
                 }
 
-                ParagraphBuilder mdPara = new ParagraphBuilder(line, GetLine(index - 1), GetLine(index + 1));
-                SkipNextLine = mdPara.SkipNextLine;
-                body.Append(mdPara.obj());
+                ParagraphBuilder paragraph = new ParagraphBuilder(line, GetLine(index - 1), GetLine(index + 1));
+                SkipNextLine = paragraph.SkipNextLine;
+                body.Append(paragraph.Build());
                 index += 1;
             }
 

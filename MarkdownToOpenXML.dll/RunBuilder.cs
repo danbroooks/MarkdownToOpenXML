@@ -15,118 +15,84 @@ namespace MarkdownToOpenXML
         private string md;
         public Paragraph para;
         private Run run;
+
+        PatternMatcher Bold;
+        PatternMatcher Italic;
+        PatternMatcher Underline;
+        PatternMatcher Tab;
+        PatternMatcher Hyperlinks_Text;
+        PatternMatcher Hyperlinks;
+        
         Ranges<int> Tokens = new Ranges<int>();
-        Ranges<int> Bold;
-        Ranges<int> Italic;
-        Ranges<int> Underline;
-        Ranges<int> Tabs;
-
-        private enum rExKey
-        {
-            DblAsterisk, Asterisk, Grave, Underscore
-        }
-
-        private static Dictionary<rExKey, Regex> Patterns = new Dictionary<rExKey, Regex>()
-        {
-            { rExKey.DblAsterisk, new Regex("(?<!\\*)(\\*\\*)([^\\ +].+?)(\\*\\*)") },
-            { rExKey.Asterisk, new Regex("(?<!\\*)[^\\*]?(\\*)([^\\*].+?)(\\*)[^\\*]") },
-            { rExKey.Grave, new Regex("(?<!`)[^`]?(`)([^`].+?)(\\`)[^`]?") },
-            { rExKey.Underscore, new Regex("(?<!_)[^_]?(_)([^_].+?)(_)[^_]?") },
-        };
 
         public RunBuilder(string md, Paragraph para)
         {
             this.para = para;
             this.md = md;
-            FindRanges();
+
+            PatternMatcher.Pattern it = MD2OXML.ExtendedMode ? PatternMatcher.Pattern.Grave : PatternMatcher.Pattern.Asterisk;
+            Italic = new PatternMatcher(it);
+            Italic.FindMatches(md, ref Tokens);
+
+            Bold = new PatternMatcher(PatternMatcher.Pattern.DblAsterisk);
+            Bold.FindMatches(md, ref Tokens);
+
+            if (MD2OXML.ExtendedMode)
+            {
+                Underline = new PatternMatcher(PatternMatcher.Pattern.Underscore);
+                Underline.FindMatches(md, ref Tokens);
+            }
+            
+            Tab = new PatternMatcher(PatternMatcher.Pattern.Tab);
+            Tab.FindMatches(md, ref Tokens);
+
+            Hyperlinks = new PatternMatcher(PatternMatcher.Pattern.Hyperlink);
+            Hyperlinks.FindMatches(md, ref Tokens);
+
+            Hyperlinks_Text = new PatternMatcher(PatternMatcher.Pattern.Hyperlink_Text);
+            Hyperlinks_Text.FindMatches(md, ref Tokens);
+
             GenerateRuns();
         }
-
-        private Ranges<int> FindMatches(Regex rx)
+        
+        private bool PatternsHaveMatches()
         {
-            Ranges<int> ranges = new Ranges<int>();
-            MatchCollection mc = rx.Matches(md);
-
-            foreach (Match m in mc)
-            {
-                int sToken = m.Groups[1].Index;
-                int match = m.Groups[2].Index;
-                int eToken = m.Groups[3].Index;
-                int endStr = m.Groups[3].Index + m.Groups[3].Length;
-
-                Tokens.add(new Range<int>()
-                {
-                    Minimum = sToken,
-                    Maximum = match - 1
-                });
-
-                ranges.add(new Range<int>()
-                {
-                    Minimum = match,
-                    Maximum = eToken - 1
-                });
-
-                Tokens.add(new Range<int>()
-                {
-                    Minimum = eToken,
-                    Maximum = endStr - 1
-                });
-            }
-
-            return ranges;
+            return (Bold.HasMatches() || Italic.HasMatches() || Underline.HasMatches() || Hyperlinks.HasMatches() || Hyperlinks_Text.HasMatches() || Tab.HasMatches());  
         }
 
-        private Ranges<int> FindTabs(Regex rx)
+        private void AppendHyperlink(string Buffer, ref Paragraph p, bool Description)
         {
-            Ranges<int> ranges = new Ranges<int>();
-            MatchCollection mc = rx.Matches(md);
+            /*
+            Text text;
+            string path;
 
-            foreach (Match m in mc)
+            if (Description)
             {
-                ranges.add(new Range<int>()
-                {
-                    Minimum = m.Index,
-                    Maximum = m.Index
-                });
+                text = new Text(Buffer.Split(']')[0].Trim('['));
 
-                Tokens.add(new Range<int>()
-                {
-                    Minimum = m.Index,
-                    Maximum = m.Index + m.Length - 1
-                });
-            }
-            return ranges;
-        }
-
-        private void FindRanges()
-        {
-            Regex pBold, pItalic, pUnderline;
-            AssignPatterns(out pBold, out pItalic, out pUnderline);
-            Bold = FindMatches(pBold);
-            Italic = FindMatches(pItalic);
-            Underline = FindMatches(pUnderline);
-            Tabs = FindTabs(new Regex(@"(\\t|[\\ ]{4})"));
-        }
-
-        private void AssignPatterns(out Regex pBold, out Regex pItalic, out Regex pUnderline)
-        {
-            if (!MD2OXML.CustomMode)
-            {
-                pBold = Patterns[rExKey.DblAsterisk];
-                pItalic = Patterns[rExKey.Asterisk];
-                pUnderline = Patterns[rExKey.Underscore];
+                path = Buffer.Split('(')[1].Trim(')');
             }
             else
             {
-                pBold = Patterns[rExKey.DblAsterisk];
-                pItalic = Patterns[rExKey.Grave];
-                pUnderline = Patterns[rExKey.Underscore];
+                path = Buffer.TrimStart('<').TrimEnd('>').Trim();
+                text = new Text(path);
             }
-        }
 
-        private bool NoMatches()
-        {
-            return ( Bold.Count() + Italic.Count() + Underline.Count() + Tabs.Count() ) == 0;  
+            MainDocumentPart mainPart = package.MainDocumentPart;
+            HyperlinkRelationship rel = mainPart.AddHyperlinkRelationship(new System.Uri(path, System.UriKind.Absolute), true);
+            string relationshipId = rel.Id;
+            p.Append(
+                new Hyperlink(
+                    new ProofError() { Type = ProofingErrorValues.GrammarStart },
+                    new Run(
+                        new RunProperties(
+                            new Underline() { Val = UnderlineValues.Single },
+                            new Color() { Val = "0000FF" },
+                            new RunStyle() { Val = "Hyperlink" }),
+                        text
+                    )) { Id = relationshipId });
+
+             */
         }
 
         private void GenerateRuns()
@@ -137,7 +103,7 @@ namespace MarkdownToOpenXML
             // in the same calculation note down location of tokens 
             // so they can be ignored when loading strings into the buffer
 
-            if (NoMatches())
+            if (!PatternsHaveMatches())
             {
                 run = new Run();
                 run.Append(new Text(md)
@@ -148,50 +114,56 @@ namespace MarkdownToOpenXML
             }
             else
             {
-                int CurrentPosition = 0;
+                int pos = 0;
+                string buffer = ""; 
                 
                 // This needs optimizing so it builds a string buffer before adding the run itself
-
-                while (CurrentPosition < md.Length)
+                while (pos < md.Length)
                 {
-                    if (!Tokens.ContainsValue(CurrentPosition) || Tabs.ContainsValue(CurrentPosition))
+                    if (!Tokens.ContainsValue(pos))
+                    {
+                        buffer += md.Substring(pos, 1);
+                    }
+                    else if (buffer.Length > 0)
                     {
                         run = new Run();
+                        RunProperties rPr = new RunProperties();
 
-                        if (Tabs.ContainsValue(CurrentPosition))
+                        Bold.SetFlagFor(pos-1);
+                        Italic.SetFlagFor(pos-1);
+                        Underline.SetFlagFor(pos-1);
+
+                        if (Bold.Flag)
+                        {
+                            rPr.Append(new Bold() { Val = new OnOffValue(true) });
+                        }
+
+                        if (Italic.Flag)
+                        {
+                            rPr.Append(new Italic());
+                        }
+
+                        if (Underline.Flag)
+                        {
+                            rPr.Append(new Underline() { Val = DocumentFormat.OpenXml.Wordprocessing.UnderlineValues.Single });
+                        }
+
+                        run.Append(rPr);
+                        run.Append(new Text(buffer)
+                        {
+                            Space = SpaceProcessingModeValues.Preserve
+                        });
+
+                        if (Tab.ContainsValue(pos))
                         {
                             run.Append(new TabChar());
                         }
-                        else
-                        {
-                            RunProperties rPr = new RunProperties();
-                            
-                            if (Bold.ContainsValue(CurrentPosition))
-                            {
-                                rPr.Append(new Bold() { Val = new OnOffValue(true) });
-                            }
-
-                            if (Italic.ContainsValue(CurrentPosition))
-                            {
-                                rPr.Append(new Italic());
-                            }
-
-                            if (Underline.ContainsValue(CurrentPosition))
-                            {
-                                rPr.Append(new Underline() { Val = DocumentFormat.OpenXml.Wordprocessing.UnderlineValues.Single });
-                            }
-                            
-                            run.Append(rPr);
-
-                            string TextBuffer = md.Substring(CurrentPosition, 1);
-                            run.Append(new Text(TextBuffer)
-                            {
-                                Space = SpaceProcessingModeValues.Preserve
-                            });
-                        }
+                        
                         para.Append(run);
+                        buffer = "";
                     }
-                    CurrentPosition++;
+
+                    pos++;
                 };
             }
         }

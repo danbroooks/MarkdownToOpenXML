@@ -62,17 +62,7 @@ This is an H2
 
 #### Formatting ####
 
-```
-*Italic* out puts italic text and **bold** outputs bold text
-```
-
-However there is a custom syntax mode which adds in support for underline, before running the main MD2OXML method, set this:
-
-```c#
-MarkdownToOpenXML.MD2OXML.customMode = true;
-```
-
-This will then support this syntax:
+By default MD2OXML is set to use it's own extended formatting syntax, adding in support for underline.
 
 ```
 **Bold text**
@@ -82,7 +72,17 @@ This will then support this syntax:
 _Underlined text_
 ```
 
-In both cases, syntax markers can be mixed and matched as you please.
+However you can set the syntax back to the original markdown rules by setting the ExtendedMode flag to false:
+
+```c#
+MarkdownToOpenXML.MD2OXML.ExtendedMode = false;
+```
+
+This will then support this syntax:
+
+```
+*Italic* out puts italic text and **bold** outputs bold text
+```
 
 #### Alignment ####
 
