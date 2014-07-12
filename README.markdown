@@ -4,8 +4,7 @@ Converts Markdown to a DocX file, allowing you to output Word files from your C#
 
 ## Building project
 
-In order to build the project you will need to install the [Open XML SDK 2.5](http://www.microsoft.com/en-ca/download/details.aspx?id=30425)
-and add a reference to **DocumentFormat.OpenXML** if it does not exist
+Clone the repository, open in Visual Studio, and build. All dependencies (such as `DocumentFormat.OpenXML`) are Nuget packages.
 
 ## Getting started ##
 
